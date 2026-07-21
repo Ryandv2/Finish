@@ -2,6 +2,49 @@
 error_reporting(0);
 ini_set('display_errors', 0);
 
+// ============================================
+// RUTA DE PRUEBA - MUESTRA EL HTML QUE LLEGA
+// ============================================
+if (isset($_GET['test'])) {
+    $testUrl = 'https://vibuxer.com/e/83kqfqtghrdx';
+    
+    $ch = curl_init($testUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        CURLOPT_HTTPHEADER => [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language: es-ES,es;q=0.9',
+            'Referer: https://vibuxer.com/',
+            'Cookie: file_id=33036962; aff=16339'
+        ]
+    ]);
+    
+    $html = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    $size = strlen($html);
+    curl_close($ch);
+    
+    header('Content-Type: application/json');
+    echo json_encode([
+        'http_code' => $code,
+        'error' => $error,
+        'html_size' => $size,
+        'html_preview' => substr($html, 0, 3000),
+        'contains_file' => strpos($html, '"file"') !== false,
+        'contains_m3u8' => strpos($html, 'm3u8') !== false,
+        'contains_stream' => strpos($html, '/stream/') !== false
+    ]);
+    exit;
+}
+
+// ============================================
+// API PARA EXTRAER STREAM
+// ============================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
     header('Content-Type: application/json');
     header('Access-Control-Allow-Origin: *');
@@ -23,12 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
     }
     
     function fetchWithCookies($url, $cookies = '') {
-        $userAgents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        ];
-        $ua = $userAgents[array_rand($userAgents)];
-        
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
@@ -38,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
             CURLOPT_TIMEOUT => 30,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => false,
-            CURLOPT_USERAGENT => $ua,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             CURLOPT_HTTPHEADER => [
                 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language: es-ES,es;q=0.9,en;q=0.8',
@@ -64,16 +101,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         return ['html' => $response, 'code' => $httpCode, 'error' => $error];
     }
     
-    // Cookies necesarias (obtenidas del código fuente de la página)
     $cookies = 'file_id=33036962; aff=16339';
-    
     $pageData = fetchWithCookies($url, $cookies);
     
     if ($pageData['error'] || $pageData['code'] !== 200) {
         echo json_encode([
             'success' => false,
             'error' => 'Error al obtener la página: ' . ($pageData['error'] ?: 'HTTP ' . $pageData['code']),
-            'debug' => ['html' => substr($pageData['html'], 0, 500)]
+            'debug' => ['html_size' => strlen($pageData['html'])]
         ]);
         exit;
     }
@@ -81,11 +116,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
     $html = $pageData['html'];
     $streamUrl = null;
     
-    // === MÉTODO 1: Buscar "file":"/stream/...m3u8" (aparece en el JSON del reproductor) ===
+    // MÉTODO 1: Buscar "file":"/stream/...m3u8"
     if (preg_match('/"file"\s*:\s*"(\/stream\/[^"]+\.m3u8)"/i', $html, $matches)) {
         $relativePath = $matches[1];
         
-        // Dominios posibles donde se aloja el stream
         $domains = [
             'https://vibuxer.com',
             'https://huntrexus.com',
@@ -103,17 +137,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         }
         
         if (!$streamUrl) {
-            // Si ninguno funciona, usar vibuxer.com como base y confiar
             $streamUrl = 'https://vibuxer.com' . $relativePath;
         }
     }
     
-    // === MÉTODO 2: Buscar en allSources ===
+    // MÉTODO 2: Buscar en allSources
     if (!$streamUrl && preg_match('/"allSources"\s*:\s*\[[^\]]*"file"\s*:\s*"([^"]+\.m3u8)"/i', $html, $matches)) {
         $streamUrl = 'https://vibuxer.com' . $matches[1];
     }
     
-    // === MÉTODO 3: Último intento con patrón directo ===
+    // MÉTODO 3: Último intento
     if (!$streamUrl && preg_match('/"file"\s*:\s*"([^"]+\.m3u8)"/i', $html, $matches)) {
         $streamUrl = 'https://vibuxer.com' . $matches[1];
     }
@@ -127,8 +160,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
     } else {
         echo json_encode([
             'success' => false,
-            'error' => 'No se encontró el stream incluso con cookies. El HTML puede no contener el reproductor.',
-            'debug' => ['html_preview' => substr($html, 0, 1500)]
+            'error' => 'No se encontró el stream en el HTML recibido',
+            'debug' => [
+                'html_size' => strlen($html),
+                'html_preview' => substr($html, 0, 2000),
+                'contains_file' => strpos($html, '"file"') !== false,
+                'contains_m3u8' => strpos($html, 'm3u8') !== false,
+                'contains_stream' => strpos($html, '/stream/') !== false
+            ]
         ]);
     }
     exit;
@@ -286,7 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
                 <h3 style="margin-bottom:10px">Error al cargar</h3>
                 <p id="errorMsg" style="color:#a1a1aa;margin-bottom:20px;max-width:400px"></p>
                 <button class="btn-primary" onclick="location.reload()"><i class="fas fa-rotate-right"></i> Reintentar</button>
-                <button class="btn-secondary" onclick="toggleDebug()"><i class="fas fa-bug"></i> Ver HTML</button>
+                <button class="btn-secondary" onclick="toggleDebug()"><i class="fas fa-bug"></i> Ver Debug</button>
             </div>
             <video id="mainPlayer" class="video-js vjs-default-skin vjs-big-play-centered hidden" controls playsinline crossorigin="anonymous"></video>
         </div>
@@ -299,8 +338,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         </div>
     </div>
     
-    <!-- Debug HTML oculto -->
-    <div id="debugPanel" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#111; color:#0f0; max-height:200px; overflow-y:auto; padding:10px; font-family:monospace; font-size:11px; z-index:100;"></div>
+    <!-- Panel de debug -->
+    <div id="debugPanel" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#111; color:#0f0; max-height:200px; overflow-y:auto; padding:10px; font-family:monospace; font-size:11px; z-index:100; white-space:pre-wrap; word-break:break-all;"></div>
     
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js"></script>
@@ -323,12 +362,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
                     setupPlayer(data.streamUrl);
                 } else {
                     showError(data.error || 'No se encontró el stream');
-                    if (data.debug && data.debug.html_preview) {
-                        document.getElementById('debugPanel').innerText = data.debug.html_preview;
+                    if (data.debug) {
+                        document.getElementById('debugPanel').innerText = JSON.stringify(data.debug, null, 2);
                     }
                 }
             } catch(e) {
-                showError('Error de conexión');
+                showError('Error de conexión: ' + e.message);
             }
         }
         
@@ -342,16 +381,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
                 playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2]
             });
             
+            const videoEl = player.el().querySelector('video');
+            
             if (url.includes('.m3u8')) {
                 if (Hls.isSupported()) {
                     const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
                     hls.loadSource(url);
-                    hls.attachMedia(player.el().querySelector('video'));
+                    hls.attachMedia(videoEl);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => player.play());
                     hls.on(Hls.Events.ERROR, (event, data) => {
                         if (data.fatal) showError('Error fatal en stream HLS');
                     });
-                } else if (player.el().querySelector('video').canPlayType('application/vnd.apple.mpegurl')) {
+                } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                     player.src({src: url, type: 'application/x-mpegURL'});
                 }
             } else {
