@@ -2,191 +2,712 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProPlayer JW</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>ProPlayer • Stream Directo</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #060606;
+            --surface: #0d0d0d;
+            --surface2: #131313;
+            --surface3: #1a1a1a;
+            --border: rgba(255,255,255,0.05);
+            --border-hover: rgba(255,255,255,0.1);
+            --accent: #6366f1;
+            --accent2: #818cf8;
+            --accent3: #a5b4fc;
+            --accent-glow: rgba(99,102,241,0.3);
+            --text: #ffffff;
+            --text2: #a1a1aa;
+            --text3: #71717a;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+            --gradient-dark: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%);
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --shadow-xl: 0 25px 80px rgba(0,0,0,0.6);
+            --shadow-lg: 0 15px 50px rgba(0,0,0,0.4);
+            --shadow-glow: 0 0 60px rgba(99,102,241,0.15);
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            font-size: 16px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
         body {
-            background: #000;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #fff;
+            background: var(--bg);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text);
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 15px;
+            padding: clamp(10px, 3vw, 24px);
+            background-image: 
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.12), transparent),
+                radial-gradient(ellipse 60% 40% at 50% 120%, rgba(139,92,246,0.08), transparent),
+                radial-gradient(ellipse 40% 30% at 20% 50%, rgba(167,139,250,0.04), transparent);
+            background-attachment: fixed;
         }
-        .container {
+        
+        /* Main Container */
+        .app {
             width: 100%;
             max-width: 1000px;
-            background: #0a0a0a;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-            border: 1px solid #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(12px, 2.5vw, 20px);
+            animation: fadeInUp 0.6s ease-out;
         }
-        .header {
-            padding: 14px 20px;
-            background: #111;
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Header Card */
+        .header-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: clamp(14px, 3vw, 20px) clamp(16px, 3vw, 24px);
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: clamp(10px, 2vw, 16px);
+            flex-wrap: wrap;
+        }
+        
+        .logo-wrapper {
             display: flex;
             align-items: center;
             gap: 10px;
-            border-bottom: 1px solid #222;
+            flex-shrink: 0;
         }
-        .logo {
-            font-size: 1.2em;
-            font-weight: 700;
-            color: #f14f4f;
-        }
-        .url-box {
-            flex: 1;
-            display: flex;
-            gap: 8px;
-        }
-        .url-box input {
-            flex: 1;
-            padding: 10px 14px;
-            background: #000;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 0.85em;
-            outline: none;
-        }
-        .btn {
-            padding: 10px 16px;
-            background: #f14f4f;
-            border: none;
-            border-radius: 8px;
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .player-box {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 16/9;
-            background: #000;
-        }
-        #jwplayer {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-        }
-        .loading {
-            position: absolute;
-            inset: 0;
-            background: #000;
+        
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: var(--gradient);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 10;
-            color: #aaa;
-            font-size: 0.9em;
+            font-size: 18px;
+            box-shadow: 0 4px 20px var(--accent-glow);
+            animation: logoGlow 3s ease-in-out infinite;
         }
-        .info-bar {
+        
+        @keyframes logoGlow {
+            0%, 100% { box-shadow: 0 4px 20px rgba(99,102,241,0.3); }
+            50% { box-shadow: 0 4px 35px rgba(139,92,246,0.6); }
+        }
+        
+        .logo-text {
+            font-size: 1.2em;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .url-input-group {
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            gap: 8px;
+            background: var(--surface2);
+            border-radius: var(--radius-md);
+            padding: 6px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        
+        .url-input-group:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(99,102,241,0.1);
+        }
+        
+        .url-input-group input {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 0.88em;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+        }
+        
+        .url-input-group input::placeholder {
+            color: var(--text3);
+        }
+        
+        .btn {
             padding: 10px 20px;
-            background: #111;
-            border-top: 1px solid #222;
-            font-size: 0.8em;
-            color: #888;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85em;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            letter-spacing: 0.2px;
         }
-        .stream-info {
-            color: #f14f4f;
-            font-family: monospace;
+        
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139,92,246,0.5);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px var(--accent-glow);
+        }
+        
+        .btn-small {
+            padding: 8px 14px;
+            font-size: 0.8em;
+            border-radius: 6px;
+        }
+        
+        /* Player Card */
+        .player-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-xl), var(--shadow-glow);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .player-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(10px, 2vw, 14px) clamp(14px, 3vw, 20px);
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.82em;
+        }
+        
+        .status-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--warning);
+            animation: pulse 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        
+        .status-dot.online { background: var(--success); }
+        .status-dot.error { background: var(--error); animation: none; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.7); }
+        }
+        
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            background: rgba(99,102,241,0.15);
+            color: var(--accent3);
+            border: 1px solid rgba(99,102,241,0.2);
+        }
+        
+        .player-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            min-height: 200px;
+        }
+        
+        /* Overlays */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+        
+        .overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        .loading-overlay {
+            background: rgba(0,0,0,0.94);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+        
+        .spinner-container {
+            position: relative;
+            width: 56px;
+            height: 56px;
+        }
+        
+        .spinner-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid transparent;
+        }
+        
+        .spinner-ring:nth-child(1) {
+            border-top-color: var(--accent);
+            animation: spin 1.2s linear infinite;
+        }
+        
+        .spinner-ring:nth-child(2) {
+            border-right-color: var(--accent2);
+            animation: spin 1.8s linear infinite reverse;
+            width: 75%;
+            height: 75%;
+            top: 12.5%;
+            left: 12.5%;
+        }
+        
+        .spinner-ring:nth-child(3) {
+            border-bottom-color: var(--accent3);
+            animation: spin 2.4s linear infinite;
+            width: 50%;
+            height: 50%;
+            top: 25%;
+            left: 25%;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            font-size: 0.88em;
+            color: var(--text2);
+            letter-spacing: 0.3px;
+            text-align: center;
+            padding: 0 20px;
+        }
+        
+        .error-overlay {
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            animation: shake 0.6s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+        
+        .error-overlay h3 {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        
+        .error-overlay p {
+            color: var(--text2);
+            font-size: 0.85em;
+            margin-bottom: 16px;
+            max-width: 350px;
+            line-height: 1.4;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: var(--text);
+            border: 1px solid var(--border-hover);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: var(--accent);
+        }
+        
+        /* JW Player */
+        #jwplayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Info Bar */
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(8px, 1.5vw, 12px) clamp(14px, 3vw, 20px);
+            background: var(--surface2);
+            border-top: 1px solid var(--border);
+            font-size: 0.78em;
+            color: var(--text2);
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .stream-url-text {
+            color: var(--accent3);
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
             font-size: 0.7em;
             word-break: break-all;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 16px;
+            color: var(--text3);
+            font-size: 0.72em;
+            letter-spacing: 0.3px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .logo-wrapper {
+                justify-content: center;
+            }
+            
+            .url-input-group {
+                flex-direction: column;
+            }
+            
+            .url-input-group .btn {
+                justify-content: center;
+            }
+            
+            .player-header-bar {
+                font-size: 0.75em;
+            }
+            
+            .stream-url-text {
+                max-width: 150px;
+                font-size: 0.65em;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .btn-group .btn {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 380px) {
+            .logo-text {
+                font-size: 1em;
+            }
+            
+            .logo-icon {
+                width: 34px;
+                height: 34px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">▶ ProPlayer</div>
-            <div class="url-box">
-                <input type="text" id="urlInput" value="https://vibuxer.com/e/83kqfqtghrdx" placeholder="URL del video...">
-                <button class="btn" onclick="cargarVideo()">Cargar</button>
+    <div class="app">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="header-content">
+                <div class="logo-wrapper">
+                    <div class="logo-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <span class="logo-text">ProPlayer</span>
+                </div>
+                <div class="url-input-group">
+                    <input 
+                        type="text" 
+                        id="urlInput" 
+                        value="https://vibuxer.com/e/83kqfqtghrdx" 
+                        placeholder="Pega la URL del video..."
+                        aria-label="URL del video"
+                    >
+                    <button class="btn btn-primary" onclick="extraerStream()">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <span>Extraer</span>
+                    </button>
+                </div>
             </div>
         </div>
         
-        <div class="player-box">
-            <div class="loading" id="loadingMsg">Presiona Cargar para iniciar</div>
-            <div id="jwplayer"></div>
+        <!-- Player -->
+        <div class="player-card">
+            <div class="player-header-bar">
+                <div class="status-group">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Esperando...</span>
+                </div>
+                <span class="badge" id="modeBadge">JW Player</span>
+            </div>
+            
+            <div class="player-wrapper" id="playerWrapper">
+                <!-- Loading -->
+                <div class="overlay loading-overlay" id="loadingOverlay">
+                    <div class="spinner-container">
+                        <div class="spinner-ring"></div>
+                        <div class="spinner-ring"></div>
+                        <div class="spinner-ring"></div>
+                    </div>
+                    <p class="loading-text" id="loadingStep">Iniciando extracción...</p>
+                </div>
+                
+                <!-- Error -->
+                <div class="overlay error-overlay hidden" id="errorOverlay">
+                    <div class="error-icon">⚠️</div>
+                    <h3>Error de extracción</h3>
+                    <p id="errorMessage">No se pudo obtener el stream de video.</p>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="extraerStream()">
+                            <i class="fas fa-rotate-right"></i> Reintentar
+                        </button>
+                        <button class="btn btn-secondary" onclick="usarStreamDirecto()">
+                            <i class="fas fa-play"></i> Usar stream directo
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- JW Player -->
+                <div id="jwplayer"></div>
+            </div>
+            
+            <!-- Info -->
+            <div class="info-bar">
+                <span><i class="fas fa-link"></i> Stream:</span>
+                <span class="stream-url-text" id="streamUrlDisplay">-</span>
+            </div>
         </div>
         
-        <div class="info-bar">
-            📡 Stream: <span class="stream-info" id="streamDisplay">-</span>
+        <!-- Footer -->
+        <div class="footer">
+            ProPlayer • Extracción M3U8 • JW Player
         </div>
     </div>
     
+    <!-- JW Player -->
     <script src="https://content.jwplatform.com/libraries/XeGdlzmk.js"></script>
     
     <script>
-        // Streams conocidos
-        const STREAMS = {
+        // ============================================
+        // CONFIGURACIÓN
+        // ============================================
+        const DEFAULT_URL = 'https://vibuxer.com/e/83kqfqtghrdx';
+        
+        // Streams directos conocidos (fallback)
+        const KNOWN_STREAMS = {
             '83kqfqtghrdx': 'https://vibuxer.com/stream/1ZKkyLZiMTYvkTaTbWU7cw/kjhhiuahiughidf/1784644908/17289178/master.m3u8'
         };
         
-        let player = null;
+        let jwPlayerInstance = null;
+        let currentStreamUrl = null;
         
-        async function cargarVideo() {
-            const url = document.getElementById('urlInput').value.trim();
-            if (!url) return;
+        // ============================================
+        // FUNCIONES PRINCIPALES
+        // ============================================
+        
+        async function extraerStream() {
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value.trim();
             
+            if (!url) {
+                mostrarError('Por favor ingresa una URL de video');
+                return;
+            }
+            
+            // Resetear estado
+            resetPlayer();
+            mostrarLoading('Conectando al servidor...');
+            actualizarEstado('Extrayendo...', '#f59e0b', 'Buscando');
+            
+            // Extraer ID del video
             const idMatch = url.match(/\/e\/([a-zA-Z0-9]+)/);
             const videoId = idMatch ? idMatch[1] : null;
             
-            document.getElementById('loadingMsg').innerHTML = '🔍 Buscando stream...';
             let streamUrl = null;
             
-            // 1. Stream conocido
-            if (videoId && STREAMS[videoId]) {
-                streamUrl = STREAMS[videoId];
-                document.getElementById('loadingMsg').innerHTML = '✅ Stream conocido';
+            // PASO 1: Verificar si tenemos stream conocido
+            if (videoId && KNOWN_STREAMS[videoId]) {
+                actualizarLoadingStep('Stream conocido encontrado');
+                streamUrl = KNOWN_STREAMS[videoId];
             }
             
-            // 2. Intentar extraer del HTML usando el proxy de Netlify
+            // PASO 2: Intentar extraer del HTML
             if (!streamUrl) {
                 try {
-                    // Usar el proxy de Netlify (_redirects)
-                    const proxyUrl = '/api/' + url.replace('https://', '');
-                    const response = await fetch(proxyUrl);
-                    const html = await response.text();
+                    actualizarLoadingStep('Obteniendo página web...');
                     
-                    // Buscar m3u8 en el HTML
-                    const match = html.match(/"file"\s*:\s*"([^"]+\.m3u8)"/i);
-                    if (match) {
-                        let path = match[1];
+                    // Usar el proxy de Netlify (/_redirects configurado)
+                    const proxyUrl = window.location.origin + '/api/' + url.replace(/^https?:\/\//, '');
+                    const response = await fetch(proxyUrl);
+                    
+                    if (!response.ok) {
+                        throw new Error('No se pudo acceder a la página');
+                    }
+                    
+                    const html = await response.text();
+                    actualizarLoadingStep('Analizando código fuente...');
+                    
+                    // Buscar "file":"...m3u8"
+                    const fileMatch = html.match(/"file"\s*:\s*"([^"]+\.m3u8)"/i);
+                    if (fileMatch) {
+                        let path = fileMatch[1];
+                        
+                        // Convertir a URL absoluta
                         if (path.startsWith('/')) {
                             const urlObj = new URL(url);
                             path = urlObj.origin + path;
+                        } else if (!path.startsWith('http')) {
+                            path = 'https://vibuxer.com/' + path;
                         }
+                        
                         streamUrl = path;
-                        document.getElementById('loadingMsg').innerHTML = '✅ Stream extraído';
+                        actualizarLoadingStep('Stream M3U8 encontrado');
                     }
-                } catch(e) {
-                    console.log('Extracción fallida:', e);
+                    
+                    // Buscar cualquier m3u8
+                    if (!streamUrl) {
+                        const m3u8Match = html.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/i);
+                        if (m3u8Match) {
+                            streamUrl = m3u8Match[0];
+                            actualizarLoadingStep('Stream M3U8 detectado');
+                        }
+                    }
+                    
+                    if (!streamUrl) {
+                        throw new Error('No se encontró stream M3U8 en la página');
+                    }
+                    
+                } catch (error) {
+                    console.warn('Extracción fallida:', error.message);
+                    
+                    // Si falla la extracción, usar stream conocido como fallback
+                    if (videoId && KNOWN_STREAMS[videoId]) {
+                        streamUrl = KNOWN_STREAMS[videoId];
+                        actualizarLoadingStep('Usando stream alternativo...');
+                    } else {
+                        mostrarError('No se pudo extraer el stream. Intenta con otra URL o usa el stream directo.');
+                        return;
+                    }
                 }
             }
             
-            // 3. Fallback
-            if (!streamUrl) {
-                streamUrl = STREAMS['83kqfqtghrdx'];
-                document.getElementById('loadingMsg').innerHTML = '⚠️ Usando stream alternativo';
-            }
-            
+            // Inicializar reproductor
             if (streamUrl) {
-                document.getElementById('streamDisplay').textContent = streamUrl;
-                initPlayer(streamUrl);
+                currentStreamUrl = streamUrl;
+                document.getElementById('streamUrlDisplay').textContent = streamUrl;
+                actualizarLoadingStep('Iniciando JW Player...');
+                iniciarJWPlayer(streamUrl);
             } else {
-                document.getElementById('loadingMsg').innerHTML = '❌ No se encontró stream';
+                mostrarError('No se encontró ningún stream de video');
             }
         }
         
-        function initPlayer(streamUrl) {
-            if (player) jwplayer('jwplayer').remove();
-            
-            document.getElementById('loadingMsg').innerHTML = '▶ Cargando JW Player...';
+        function iniciarJWPlayer(streamUrl) {
+            // Limpiar player anterior
+            if (jwPlayerInstance) {
+                try { jwplayer('jwplayer').remove(); } catch(e) {}
+                jwPlayerInstance = null;
+            }
             
             jwplayer('jwplayer').setup({
                 file: streamUrl,
@@ -195,38 +716,126 @@
                 height: '100%',
                 aspectratio: '16:9',
                 autostart: true,
+                mute: false,
                 primary: 'html5',
                 hlshtml: true,
                 androidhls: true,
+                preload: 'auto',
                 skin: {
                     name: 'bekle',
-                    active: '#f14f4f',
-                    inactive: '#999',
-                    background: '#000'
+                    active: '#6366f1',
+                    inactive: '#71717a',
+                    background: '#0a0a0a'
                 },
                 playbackRateControls: [0.5, 0.75, 1, 1.25, 1.5, 2],
-                logo: { hide: true }
+                cast: {},
+                logo: {
+                    hide: true
+                }
             });
             
-            jwplayer('jwplayer').on('ready', function() {
-                document.getElementById('loadingMsg').style.display = 'none';
+            jwPlayerInstance = jwplayer('jwplayer');
+            
+            // Eventos
+            jwPlayerInstance.on('ready', function() {
+                ocultarLoading();
+                actualizarEstado('Reproduciendo', '#22c55e', 'Stream Directo');
             });
             
-            jwplayer('jwplayer').on('error', function() {
-                document.getElementById('loadingMsg').innerHTML = '⚠️ Error de reproducción';
-                document.getElementById('loadingMsg').style.display = 'flex';
+            jwPlayerInstance.on('setupError', function(e) {
+                console.error('Setup error:', e);
+                mostrarError('Error al configurar el reproductor. El stream podría no ser accesible.');
             });
             
-            player = jwplayer('jwplayer');
+            jwPlayerInstance.on('error', function(e) {
+                console.error('JW Player error:', e);
+                mostrarError('Error de reproducción. Verifica que el stream sea válido.');
+            });
+            
+            jwPlayerInstance.on('buffer', function() {
+                actualizarEstado('Cargando...', '#f59e0b', 'Buffer');
+            });
+            
+            jwPlayerInstance.on('play', function() {
+                actualizarEstado('Reproduciendo', '#22c55e', 'Stream Directo');
+            });
         }
         
-        // Cargar automáticamente
-        window.addEventListener('DOMContentLoaded', function() {
-            setTimeout(cargarVideo, 500);
+        function usarStreamDirecto() {
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value.trim();
+            const idMatch = url.match(/\/e\/([a-zA-Z0-9]+)/);
+            const videoId = idMatch ? idMatch[1] : '83kqfqtghrdx';
+            
+            const streamUrl = KNOWN_STREAMS[videoId] || KNOWN_STREAMS['83kqfqtghrdx'];
+            
+            ocultarError();
+            mostrarLoading('Usando stream directo...');
+            currentStreamUrl = streamUrl;
+            document.getElementById('streamUrlDisplay').textContent = streamUrl;
+            iniciarJWPlayer(streamUrl);
+        }
+        
+        // ============================================
+        // FUNCIONES DE UI
+        // ============================================
+        
+        function resetPlayer() {
+            if (jwPlayerInstance) {
+                try { jwplayer('jwplayer').remove(); } catch(e) {}
+                jwPlayerInstance = null;
+            }
+            document.getElementById('jwplayer').innerHTML = '';
+            ocultarError();
+            document.getElementById('streamUrlDisplay').textContent = '-';
+        }
+        
+        function mostrarLoading(texto) {
+            document.getElementById('loadingStep').textContent = texto;
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('errorOverlay').classList.add('hidden');
+        }
+        
+        function actualizarLoadingStep(texto) {
+            document.getElementById('loadingStep').textContent = texto;
+        }
+        
+        function ocultarLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+        
+        function mostrarError(mensaje) {
+            document.getElementById('errorMessage').textContent = mensaje;
+            document.getElementById('errorOverlay').classList.remove('hidden');
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            actualizarEstado('Error', '#ef4444', 'Falló');
+        }
+        
+        function ocultarError() {
+            document.getElementById('errorOverlay').classList.add('hidden');
+        }
+        
+        function actualizarEstado(texto, color, badge) {
+            document.getElementById('statusText').textContent = texto;
+            const dot = document.getElementById('statusDot');
+            dot.style.background = color;
+            dot.classList.remove('online', 'error');
+            if (color === '#22c55e') dot.classList.add('online');
+            if (color === '#ef4444') dot.classList.add('error');
+            if (badge) document.getElementById('modeBadge').textContent = badge;
+        }
+        
+        // ============================================
+        // EVENTOS
+        // ============================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cargar automáticamente después de un breve delay
+            setTimeout(extraerStream, 800);
         });
         
         document.getElementById('urlInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') cargarVideo();
+            if (e.key === 'Enter') extraerStream();
         });
     </script>
 </body>
