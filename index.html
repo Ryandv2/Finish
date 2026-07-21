@@ -8,12 +8,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>ProPlayer • Stream Directo</title>
     
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
@@ -35,7 +32,6 @@
             --warning: #f59e0b;
             --error: #ef4444;
             --gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
-            --gradient-dark: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%);
             --radius-xl: 24px;
             --radius-lg: 18px;
             --radius-md: 14px;
@@ -46,16 +42,9 @@
             --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        html {
-            font-size: 16px;
-            -webkit-tap-highlight-color: transparent;
-        }
+        html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
         
         body {
             background: var(--bg);
@@ -69,12 +58,10 @@
             padding: clamp(10px, 3vw, 24px);
             background-image: 
                 radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.12), transparent),
-                radial-gradient(ellipse 60% 40% at 50% 120%, rgba(139,92,246,0.08), transparent),
-                radial-gradient(ellipse 40% 30% at 20% 50%, rgba(167,139,250,0.04), transparent);
+                radial-gradient(ellipse 60% 40% at 50% 120%, rgba(139,92,246,0.08), transparent);
             background-attachment: fixed;
         }
         
-        /* Main Container */
         .app {
             width: 100%;
             max-width: 1000px;
@@ -85,17 +72,10 @@
         }
         
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Header Card */
         .header-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -121,8 +101,7 @@
         }
         
         .logo-icon {
-            width: 42px;
-            height: 42px;
+            width: 42px; height: 42px;
             background: var(--gradient);
             border-radius: 12px;
             display: flex;
@@ -177,9 +156,7 @@
             outline: none;
         }
         
-        .url-input-group input::placeholder {
-            color: var(--text3);
-        }
+        .url-input-group input::placeholder { color: var(--text3); }
         
         .btn {
             padding: 10px 20px;
@@ -213,13 +190,6 @@
             box-shadow: 0 2px 10px var(--accent-glow);
         }
         
-        .btn-small {
-            padding: 8px 14px;
-            font-size: 0.8em;
-            border-radius: 6px;
-        }
-        
-        /* Player Card */
         .player-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -247,8 +217,7 @@
         }
         
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 8px; height: 8px;
             border-radius: 50%;
             background: var(--warning);
             animation: pulse 2s ease-in-out infinite;
@@ -277,12 +246,11 @@
         .player-wrapper {
             position: relative;
             width: 100%;
-            aspect-ratio: 16 / 9;
+            aspect-ratio: 16/9;
             background: #000;
             min-height: 200px;
         }
         
-        /* Overlays */
         .overlay {
             position: absolute;
             inset: 0;
@@ -308,14 +276,12 @@
         
         .spinner-container {
             position: relative;
-            width: 56px;
-            height: 56px;
+            width: 56px; height: 56px;
         }
         
         .spinner-ring {
             position: absolute;
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             border-radius: 50%;
             border: 3px solid transparent;
         }
@@ -328,24 +294,11 @@
         .spinner-ring:nth-child(2) {
             border-right-color: var(--accent2);
             animation: spin 1.8s linear infinite reverse;
-            width: 75%;
-            height: 75%;
-            top: 12.5%;
-            left: 12.5%;
+            width: 75%; height: 75%;
+            top: 12.5%; left: 12.5%;
         }
         
-        .spinner-ring:nth-child(3) {
-            border-bottom-color: var(--accent3);
-            animation: spin 2.4s linear infinite;
-            width: 50%;
-            height: 50%;
-            top: 25%;
-            left: 25%;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         
         .loading-text {
             margin-top: 20px;
@@ -410,16 +363,12 @@
             border-color: var(--accent);
         }
         
-        /* JW Player */
         #jwplayer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
         }
         
-        /* Info Bar */
         .info-bar {
             display: flex;
             justify-content: space-between;
@@ -444,7 +393,6 @@
             white-space: nowrap;
         }
         
-        /* Footer */
         .footer {
             text-align: center;
             padding: 16px;
@@ -453,54 +401,20 @@
             letter-spacing: 0.3px;
         }
         
-        /* Responsive */
         @media (max-width: 640px) {
-            .header-content {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .logo-wrapper {
-                justify-content: center;
-            }
-            
-            .url-input-group {
-                flex-direction: column;
-            }
-            
-            .url-input-group .btn {
-                justify-content: center;
-            }
-            
-            .player-header-bar {
-                font-size: 0.75em;
-            }
-            
-            .stream-url-text {
-                max-width: 150px;
-                font-size: 0.65em;
-            }
-            
-            .btn-group {
-                flex-direction: column;
-                width: 100%;
-            }
-            
-            .btn-group .btn {
-                justify-content: center;
-            }
+            .header-content { flex-direction: column; align-items: stretch; }
+            .logo-wrapper { justify-content: center; }
+            .url-input-group { flex-direction: column; }
+            .url-input-group .btn { justify-content: center; }
+            .player-header-bar { font-size: 0.75em; }
+            .stream-url-text { max-width: 150px; font-size: 0.65em; }
+            .btn-group { flex-direction: column; width: 100%; }
+            .btn-group .btn { justify-content: center; }
         }
         
         @media (max-width: 380px) {
-            .logo-text {
-                font-size: 1em;
-            }
-            
-            .logo-icon {
-                width: 34px;
-                height: 34px;
-                font-size: 14px;
-            }
+            .logo-text { font-size: 1em; }
+            .logo-icon { width: 34px; height: 34px; font-size: 14px; }
         }
     </style>
 </head>
@@ -523,9 +437,9 @@
                         placeholder="Pega la URL del video..."
                         aria-label="URL del video"
                     >
-                    <button class="btn btn-primary" onclick="extraerStream()">
-                        <i class="fas fa-magnifying-glass"></i>
-                        <span>Extraer</span>
+                    <button class="btn btn-primary" onclick="cargarVideo()">
+                        <i class="fas fa-play"></i>
+                        <span>Cargar</span>
                     </button>
                 </div>
             </div>
@@ -535,10 +449,10 @@
         <div class="player-card">
             <div class="player-header-bar">
                 <div class="status-group">
-                    <span class="status-dot" id="statusDot"></span>
-                    <span id="statusText">Esperando...</span>
+                    <span class="status-dot online" id="statusDot"></span>
+                    <span id="statusText">Reproduciendo</span>
                 </div>
-                <span class="badge" id="modeBadge">JW Player</span>
+                <span class="badge" id="modeBadge">Stream Directo</span>
             </div>
             
             <div class="player-wrapper" id="playerWrapper">
@@ -547,24 +461,8 @@
                     <div class="spinner-container">
                         <div class="spinner-ring"></div>
                         <div class="spinner-ring"></div>
-                        <div class="spinner-ring"></div>
                     </div>
-                    <p class="loading-text" id="loadingStep">Iniciando extracción...</p>
-                </div>
-                
-                <!-- Error -->
-                <div class="overlay error-overlay hidden" id="errorOverlay">
-                    <div class="error-icon">⚠️</div>
-                    <h3>Error de extracción</h3>
-                    <p id="errorMessage">No se pudo obtener el stream de video.</p>
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="extraerStream()">
-                            <i class="fas fa-rotate-right"></i> Reintentar
-                        </button>
-                        <button class="btn btn-secondary" onclick="usarStreamDirecto()">
-                            <i class="fas fa-play"></i> Usar stream directo
-                        </button>
-                    </div>
+                    <p class="loading-text">Cargando reproductor...</p>
                 </div>
                 
                 <!-- JW Player -->
@@ -580,7 +478,7 @@
         
         <!-- Footer -->
         <div class="footer">
-            ProPlayer • Extracción M3U8 • JW Player
+            ProPlayer • Stream Directo • JW Player
         </div>
     </div>
     
@@ -589,126 +487,42 @@
     
     <script>
         // ============================================
-        // CONFIGURACIÓN
+        // STREAMS CONOCIDOS (se actualizan fácilmente)
         // ============================================
-        const DEFAULT_URL = 'https://vibuxer.com/e/83kqfqtghrdx';
-        
-        // Streams directos conocidos (fallback)
-        const KNOWN_STREAMS = {
-            '83kqfqtghrdx': 'https://vibuxer.com/stream/1ZKkyLZiMTYvkTaTbWU7cw/kjhhiuahiughidf/1784644908/17289178/master.m3u8'
+        const STREAMS = {
+            '83kqfqtghrdx': 'https://vibuxer.com/stream/ar-4w7hOa07yXU9g_DMLEQ/kJhhiuahiughidf/1784657433/17289178/master.m3u8'
         };
         
-        let jwPlayerInstance = null;
-        let currentStreamUrl = null;
+        const DEFAULT_STREAM = 'https://vibuxer.com/stream/ar-4w7hOa07yXU9g_DMLEQ/kJhhiuahiughidf/1784657433/17289178/master.m3u8';
+        
+        let player = null;
         
         // ============================================
-        // FUNCIONES PRINCIPALES
+        // FUNCIÓN PRINCIPAL
         // ============================================
-        
-        async function extraerStream() {
-            const urlInput = document.getElementById('urlInput');
-            const url = urlInput.value.trim();
-            
-            if (!url) {
-                mostrarError('Por favor ingresa una URL de video');
-                return;
-            }
-            
-            // Resetear estado
-            resetPlayer();
-            mostrarLoading('Conectando al servidor...');
-            actualizarEstado('Extrayendo...', '#f59e0b', 'Buscando');
-            
-            // Extraer ID del video
+        function cargarVideo() {
+            const url = document.getElementById('urlInput').value.trim();
             const idMatch = url.match(/\/e\/([a-zA-Z0-9]+)/);
             const videoId = idMatch ? idMatch[1] : null;
             
-            let streamUrl = null;
+            // Buscar stream conocido o usar default
+            const streamUrl = (videoId && STREAMS[videoId]) ? STREAMS[videoId] : DEFAULT_STREAM;
             
-            // PASO 1: Verificar si tenemos stream conocido
-            if (videoId && KNOWN_STREAMS[videoId]) {
-                actualizarLoadingStep('Stream conocido encontrado');
-                streamUrl = KNOWN_STREAMS[videoId];
-            }
-            
-            // PASO 2: Intentar extraer del HTML
-            if (!streamUrl) {
-                try {
-                    actualizarLoadingStep('Obteniendo página web...');
-                    
-                    // Usar el proxy de Netlify (/_redirects configurado)
-                    const proxyUrl = window.location.origin + '/api/' + url.replace(/^https?:\/\//, '');
-                    const response = await fetch(proxyUrl);
-                    
-                    if (!response.ok) {
-                        throw new Error('No se pudo acceder a la página');
-                    }
-                    
-                    const html = await response.text();
-                    actualizarLoadingStep('Analizando código fuente...');
-                    
-                    // Buscar "file":"...m3u8"
-                    const fileMatch = html.match(/"file"\s*:\s*"([^"]+\.m3u8)"/i);
-                    if (fileMatch) {
-                        let path = fileMatch[1];
-                        
-                        // Convertir a URL absoluta
-                        if (path.startsWith('/')) {
-                            const urlObj = new URL(url);
-                            path = urlObj.origin + path;
-                        } else if (!path.startsWith('http')) {
-                            path = 'https://vibuxer.com/' + path;
-                        }
-                        
-                        streamUrl = path;
-                        actualizarLoadingStep('Stream M3U8 encontrado');
-                    }
-                    
-                    // Buscar cualquier m3u8
-                    if (!streamUrl) {
-                        const m3u8Match = html.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/i);
-                        if (m3u8Match) {
-                            streamUrl = m3u8Match[0];
-                            actualizarLoadingStep('Stream M3U8 detectado');
-                        }
-                    }
-                    
-                    if (!streamUrl) {
-                        throw new Error('No se encontró stream M3U8 en la página');
-                    }
-                    
-                } catch (error) {
-                    console.warn('Extracción fallida:', error.message);
-                    
-                    // Si falla la extracción, usar stream conocido como fallback
-                    if (videoId && KNOWN_STREAMS[videoId]) {
-                        streamUrl = KNOWN_STREAMS[videoId];
-                        actualizarLoadingStep('Usando stream alternativo...');
-                    } else {
-                        mostrarError('No se pudo extraer el stream. Intenta con otra URL o usa el stream directo.');
-                        return;
-                    }
-                }
-            }
-            
-            // Inicializar reproductor
-            if (streamUrl) {
-                currentStreamUrl = streamUrl;
-                document.getElementById('streamUrlDisplay').textContent = streamUrl;
-                actualizarLoadingStep('Iniciando JW Player...');
-                iniciarJWPlayer(streamUrl);
-            } else {
-                mostrarError('No se encontró ningún stream de video');
-            }
+            document.getElementById('streamUrlDisplay').textContent = streamUrl;
+            iniciarPlayer(streamUrl);
         }
         
-        function iniciarJWPlayer(streamUrl) {
+        function iniciarPlayer(streamUrl) {
+            // Mostrar loading
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            actualizarEstado('Cargando...', '#f59e0b', 'Iniciando');
+            
             // Limpiar player anterior
-            if (jwPlayerInstance) {
+            if (player) {
                 try { jwplayer('jwplayer').remove(); } catch(e) {}
-                jwPlayerInstance = null;
             }
             
+            // Configurar JW Player
             jwplayer('jwplayer').setup({
                 file: streamUrl,
                 type: 'hls',
@@ -729,90 +543,30 @@
                 },
                 playbackRateControls: [0.5, 0.75, 1, 1.25, 1.5, 2],
                 cast: {},
-                logo: {
-                    hide: true
-                }
+                logo: { hide: true }
             });
             
-            jwPlayerInstance = jwplayer('jwplayer');
+            player = jwplayer('jwplayer');
             
             // Eventos
-            jwPlayerInstance.on('ready', function() {
-                ocultarLoading();
+            player.on('ready', function() {
+                document.getElementById('loadingOverlay').classList.add('hidden');
                 actualizarEstado('Reproduciendo', '#22c55e', 'Stream Directo');
             });
             
-            jwPlayerInstance.on('setupError', function(e) {
-                console.error('Setup error:', e);
-                mostrarError('Error al configurar el reproductor. El stream podría no ser accesible.');
+            player.on('error', function(e) {
+                console.error('Error:', e);
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                actualizarEstado('Error de reproducción', '#ef4444', 'Error');
             });
             
-            jwPlayerInstance.on('error', function(e) {
-                console.error('JW Player error:', e);
-                mostrarError('Error de reproducción. Verifica que el stream sea válido.');
+            player.on('buffer', function() {
+                actualizarEstado('Cargando buffer...', '#f59e0b', 'Buffer');
             });
             
-            jwPlayerInstance.on('buffer', function() {
-                actualizarEstado('Cargando...', '#f59e0b', 'Buffer');
-            });
-            
-            jwPlayerInstance.on('play', function() {
+            player.on('play', function() {
                 actualizarEstado('Reproduciendo', '#22c55e', 'Stream Directo');
             });
-        }
-        
-        function usarStreamDirecto() {
-            const urlInput = document.getElementById('urlInput');
-            const url = urlInput.value.trim();
-            const idMatch = url.match(/\/e\/([a-zA-Z0-9]+)/);
-            const videoId = idMatch ? idMatch[1] : '83kqfqtghrdx';
-            
-            const streamUrl = KNOWN_STREAMS[videoId] || KNOWN_STREAMS['83kqfqtghrdx'];
-            
-            ocultarError();
-            mostrarLoading('Usando stream directo...');
-            currentStreamUrl = streamUrl;
-            document.getElementById('streamUrlDisplay').textContent = streamUrl;
-            iniciarJWPlayer(streamUrl);
-        }
-        
-        // ============================================
-        // FUNCIONES DE UI
-        // ============================================
-        
-        function resetPlayer() {
-            if (jwPlayerInstance) {
-                try { jwplayer('jwplayer').remove(); } catch(e) {}
-                jwPlayerInstance = null;
-            }
-            document.getElementById('jwplayer').innerHTML = '';
-            ocultarError();
-            document.getElementById('streamUrlDisplay').textContent = '-';
-        }
-        
-        function mostrarLoading(texto) {
-            document.getElementById('loadingStep').textContent = texto;
-            document.getElementById('loadingOverlay').classList.remove('hidden');
-            document.getElementById('errorOverlay').classList.add('hidden');
-        }
-        
-        function actualizarLoadingStep(texto) {
-            document.getElementById('loadingStep').textContent = texto;
-        }
-        
-        function ocultarLoading() {
-            document.getElementById('loadingOverlay').classList.add('hidden');
-        }
-        
-        function mostrarError(mensaje) {
-            document.getElementById('errorMessage').textContent = mensaje;
-            document.getElementById('errorOverlay').classList.remove('hidden');
-            document.getElementById('loadingOverlay').classList.add('hidden');
-            actualizarEstado('Error', '#ef4444', 'Falló');
-        }
-        
-        function ocultarError() {
-            document.getElementById('errorOverlay').classList.add('hidden');
         }
         
         function actualizarEstado(texto, color, badge) {
@@ -828,14 +582,12 @@
         // ============================================
         // EVENTOS
         // ============================================
-        
         document.addEventListener('DOMContentLoaded', function() {
-            // Cargar automáticamente después de un breve delay
-            setTimeout(extraerStream, 800);
+            setTimeout(cargarVideo, 500);
         });
         
         document.getElementById('urlInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') extraerStream();
+            if (e.key === 'Enter') cargarVideo();
         });
     </script>
 </body>
