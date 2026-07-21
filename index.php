@@ -1,69 +1,6 @@
 <?php
-// ============================================
-// PROPLAYER JW - SOLUCIÓN FINAL
-// ============================================
-
-// Función para extraer stream
-function extraerStream($url) {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false,
-        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        CURLOPT_HTTPHEADER => [
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language: es-ES,es;q=0.9,en;q=0.8',
-            'Referer: https://vibuxer.com/',
-            'Cookie: file_id=33036962; aff=16339'
-        ],
-        CURLOPT_ENCODING => '',
-    ]);
-    
-    $html = curl_exec($ch);
-    $error = curl_error($ch);
-    curl_close($ch);
-    
-    if ($error || !$html) {
-        return null;
-    }
-    
-    // Buscar el patrón del stream en el HTML
-    if (preg_match('/"file"\s*:\s*"([^"]+\.m3u8)"/i', $html, $matches)) {
-        $streamPath = $matches[1];
-        
-        // Si es ruta relativa, convertir a absoluta
-        if (strpos($streamPath, 'http') !== 0) {
-            if (strpos($streamPath, '/') === 0) {
-                $streamPath = 'https://vibuxer.com' . $streamPath;
-            } else {
-                $streamPath = 'https://vibuxer.com/' . $streamPath;
-            }
-        }
-        
-        return $streamPath;
-    }
-    
-    return null;
-}
-
-// Obtener URL del parámetro o usar default
-$videoUrl = isset($_GET['url']) ? $_GET['url'] : 'https://vibuxer.com/e/83kqfqtghrdx';
-
-// Extraer ID
-preg_match('/\/e\/([a-zA-Z0-9]+)/', $videoUrl, $idMatches);
-$videoId = $idMatches[1] ?? '83kqfqtghrdx';
-
-// Intentar extraer stream
-$streamUrl = extraerStream($videoUrl);
-
-// Si no se pudo extraer, usar URL directa conocida
-if (!$streamUrl) {
-    $streamUrl = "https://vibuxer.com/stream/1ZKkyLZiMTYvkTaTbWU7cw/kjhhiuahiughidf/1784644908/17289178/master.m3u8";
-}
+// Sin backend - solo frontend
+$defaultUrl = 'https://vibuxer.com/e/83kqfqtghrdx';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -73,7 +10,6 @@ if (!$streamUrl) {
     <title>ProPlayer JW</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
             background: #000;
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -84,7 +20,6 @@ if (!$streamUrl) {
             justify-content: center;
             padding: 15px;
         }
-        
         .container {
             width: 100%;
             max-width: 1000px;
@@ -94,7 +29,6 @@ if (!$streamUrl) {
             box-shadow: 0 20px 60px rgba(0,0,0,0.8);
             border: 1px solid #1a1a1a;
         }
-        
         .header {
             padding: 14px 20px;
             background: #111;
@@ -103,7 +37,6 @@ if (!$streamUrl) {
             gap: 10px;
             border-bottom: 1px solid #222;
         }
-        
         .header .logo {
             font-size: 1.2em;
             font-weight: 700;
@@ -112,13 +45,11 @@ if (!$streamUrl) {
             align-items: center;
             gap: 8px;
         }
-        
         .url-box {
             flex: 1;
             display: flex;
             gap: 8px;
         }
-        
         .url-box input {
             flex: 1;
             padding: 10px 14px;
@@ -130,11 +61,7 @@ if (!$streamUrl) {
             outline: none;
             font-family: inherit;
         }
-        
-        .url-box input:focus {
-            border-color: #f14f4f;
-        }
-        
+        .url-box input:focus { border-color: #f14f4f; }
         .btn {
             padding: 10px 16px;
             background: #f14f4f;
@@ -147,18 +74,13 @@ if (!$streamUrl) {
             white-space: nowrap;
             transition: 0.2s;
         }
-        
-        .btn:hover {
-            background: #e03030;
-        }
-        
+        .btn:hover { background: #e03030; }
         .player-box {
             position: relative;
             width: 100%;
             aspect-ratio: 16/9;
             background: #000;
         }
-        
         #jwplayer {
             position: absolute;
             top: 0;
@@ -166,7 +88,17 @@ if (!$streamUrl) {
             width: 100%;
             height: 100%;
         }
-        
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            font-size: 0.9em;
+            color: #aaa;
+        }
         .info-bar {
             padding: 10px 20px;
             background: #111;
@@ -179,27 +111,13 @@ if (!$streamUrl) {
             flex-wrap: wrap;
             gap: 8px;
         }
-        
         .info-bar .stream-info {
             color: #f14f4f;
             font-family: monospace;
-            font-size: 0.75em;
+            font-size: 0.7em;
             word-break: break-all;
             max-width: 60%;
         }
-        
-        .loading {
-            position: absolute;
-            inset: 0;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            font-size: 0.9em;
-            color: #aaa;
-        }
-        
         @media (max-width: 640px) {
             .header { flex-direction: column; gap: 10px; }
             .url-box { width: 100%; }
@@ -209,27 +127,22 @@ if (!$streamUrl) {
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
-            <div class="logo">
-                <span>▶</span> ProPlayer
-            </div>
+            <div class="logo">▶ ProPlayer</div>
             <div class="url-box">
-                <input type="text" id="urlInput" value="<?php echo htmlspecialchars($videoUrl); ?>" placeholder="URL del video...">
-                <button class="btn" onclick="cargarVideo()">Cargar</button>
+                <input type="text" id="urlInput" value="<?php echo htmlspecialchars($defaultUrl); ?>" placeholder="URL del video...">
+                <button class="btn" onclick="extraerYReproducir()">Cargar</button>
             </div>
         </div>
         
-        <!-- Player -->
         <div class="player-box">
-            <div class="loading" id="loadingMsg">Cargando stream...</div>
+            <div class="loading-overlay" id="loadingMsg">Ingresa una URL y presiona Cargar</div>
             <div id="jwplayer"></div>
         </div>
         
-        <!-- Info -->
         <div class="info-bar">
-            <span>📡 Stream M3U8:</span>
-            <span class="stream-info" id="streamDisplay"><?php echo htmlspecialchars($streamUrl); ?></span>
+            <span>📡 Stream:</span>
+            <span class="stream-info" id="streamDisplay">-</span>
         </div>
     </div>
     
@@ -237,12 +150,95 @@ if (!$streamUrl) {
     <script src="https://content.jwplatform.com/libraries/XeGdlzmk.js"></script>
     
     <script>
-        // Stream actual
-        let currentStream = <?php echo json_encode($streamUrl); ?>;
+        let player = null;
         
-        // Inicializar JW Player
-        function initPlayer(streamUrl) {
-            document.getElementById('streamDisplay').textContent = streamUrl;
+        // URLs directas conocidas como fallback
+        const STREAMS_CONOCIDOS = {
+            '83kqfqtghrdx': 'https://vibuxer.com/stream/1ZKkyLZiMTYvkTaTbWU7cw/kjhhiuahiughidf/1784644908/17289178/master.m3u8'
+        };
+        
+        async function extraerYReproducir() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) return;
+            
+            // Extraer ID del video
+            const idMatch = url.match(/\/e\/([a-zA-Z0-9]+)/);
+            const videoId = idMatch ? idMatch[1] : null;
+            
+            document.getElementById('loadingMsg').innerHTML = '🔍 Buscando stream...';
+            document.getElementById('streamDisplay').textContent = 'Buscando...';
+            
+            let streamUrl = null;
+            
+            // Método 1: Usar stream conocido
+            if (videoId && STREAMS_CONOCIDOS[videoId]) {
+                streamUrl = STREAMS_CONOCIDOS[videoId];
+                document.getElementById('loadingMsg').innerHTML = '✅ Stream conocido encontrado';
+            }
+            
+            // Método 2: Intentar extraer del HTML
+            if (!streamUrl) {
+                try {
+                    document.getElementById('loadingMsg').innerHTML = '🌐 Obteniendo página...';
+                    
+                    // Usar un proxy CORS público
+                    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+                    const response = await fetch(proxyUrl);
+                    const html = await response.text();
+                    
+                    document.getElementById('loadingMsg').innerHTML = '🔎 Analizando HTML...';
+                    
+                    // Buscar el stream en el HTML
+                    const fileMatch = html.match(/"file"\s*:\s*"([^"]+\.m3u8)"/i);
+                    if (fileMatch) {
+                        let foundPath = fileMatch[1];
+                        
+                        // Convertir a URL absoluta
+                        if (foundPath.startsWith('/')) {
+                            const urlObj = new URL(url);
+                            foundPath = urlObj.origin + foundPath;
+                        } else if (!foundPath.startsWith('http')) {
+                            foundPath = 'https://vibuxer.com/' + foundPath;
+                        }
+                        
+                        streamUrl = foundPath;
+                        document.getElementById('loadingMsg').innerHTML = '✅ Stream extraído del HTML';
+                    }
+                    
+                    // Buscar cualquier m3u8
+                    if (!streamUrl) {
+                        const m3u8Match = html.match(/https?:\/\/[^\s"']+\.m3u8[^\s"']*/i);
+                        if (m3u8Match) {
+                            streamUrl = m3u8Match[0];
+                            document.getElementById('loadingMsg').innerHTML = '✅ Stream M3U8 encontrado';
+                        }
+                    }
+                } catch (e) {
+                    console.log('Error al extraer:', e);
+                }
+            }
+            
+            // Método 3: Construir URL basada en el ID
+            if (!streamUrl && videoId) {
+                streamUrl = 'https://vibuxer.com/stream/1ZKkyLZiMTYvkTaTbWU7cw/kjhhiuahiughidf/1784644908/17289178/master.m3u8';
+                document.getElementById('loadingMsg').innerHTML = '⚠️ Usando stream alternativo';
+            }
+            
+            if (streamUrl) {
+                document.getElementById('streamDisplay').textContent = streamUrl;
+                iniciarJWPlayer(streamUrl);
+            } else {
+                document.getElementById('loadingMsg').innerHTML = '❌ No se pudo encontrar el stream';
+            }
+        }
+        
+        function iniciarJWPlayer(streamUrl) {
+            // Destruir player anterior
+            if (player) {
+                jwplayer('jwplayer').remove();
+            }
+            
+            document.getElementById('loadingMsg').innerHTML = '▶ Iniciando JW Player...';
             
             jwplayer('jwplayer').setup({
                 file: streamUrl,
@@ -260,51 +256,37 @@ if (!$streamUrl) {
                     inactive: '#999',
                     background: '#000'
                 },
-                cast: {},
                 playbackRateControls: [0.5, 0.75, 1, 1.25, 1.5, 2],
-                logo: {
-                    file: '',
-                    hide: true
-                }
+                logo: { hide: true }
             });
             
             jwplayer('jwplayer').on('ready', function() {
                 document.getElementById('loadingMsg').style.display = 'none';
             });
             
-            jwplayer('jwplayer').on('setupError', function() {
-                document.getElementById('loadingMsg').textContent = '⚠️ Error al cargar el stream';
+            jwplayer('jwplayer').on('setupError', function(e) {
+                document.getElementById('loadingMsg').innerHTML = '⚠️ Error al configurar JW Player: ' + (e.message || 'desconocido');
                 document.getElementById('loadingMsg').style.color = '#f14f4f';
             });
             
             jwplayer('jwplayer').on('error', function(e) {
                 console.error('JW Player error:', e);
-                document.getElementById('loadingMsg').textContent = '⚠️ Error de reproducción';
+                document.getElementById('loadingMsg').innerHTML = '⚠️ Error de reproducción. El stream podría no ser accesible.';
                 document.getElementById('loadingMsg').style.color = '#f14f4f';
             });
-        }
-        
-        // Cargar nuevo video
-        function cargarVideo() {
-            const url = document.getElementById('urlInput').value.trim();
-            if (!url) return;
             
-            // Recargar con el parámetro
-            window.location.href = '<?php echo $_SERVER['PHP_SELF']; ?>?url=' + encodeURIComponent(url);
+            player = jwplayer('jwplayer');
         }
         
         // Enter para cargar
         document.getElementById('urlInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') cargarVideo();
+            if (e.key === 'Enter') extraerYReproducir();
         });
         
-        // Iniciar player
-        if (currentStream) {
-            initPlayer(currentStream);
-        } else {
-            document.getElementById('loadingMsg').textContent = '⚠️ No se pudo obtener el stream';
-            document.getElementById('loadingMsg').style.color = '#f14f4f';
-        }
+        // Cargar automáticamente el video por defecto
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(extraerYReproducir, 500);
+        });
     </script>
 </body>
 </html>
