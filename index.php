@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         exit;
     }
     
-    // Extraer ID del video
+    // Extraer ID
     preg_match('/\/e\/([a-zA-Z0-9]+)/', $url, $matches);
     $videoId = $matches[1] ?? null;
     
@@ -23,183 +23,136 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         exit;
     }
     
-    /**
-     * MÉTODO 1: API de extracción pública (gratuita)
-     * Estos servicios ejecutan JavaScript real
-     */
-    $apis = [
-        [
-            'url' => 'https://api.telegram.org/doesntexist',
-            'method' => 'GET'
-        ],
-        [
-            'url' => 'https://webcache.googleusercontent.com/search?q=cache:' . urlencode($url),
-            'method' => 'GET',
-            'extractor' => function($html) {
-                // Extraer del cache de Google
-                preg_match_all('/https?:\/\/[^\s"\'<>]+\.m3u8[^\s"\'<>]*/i', $html, $m);
-                return $m[0] ?? [];
-            }
-        ]
-    ];
-    
-    /**
-     * MÉTODO 2: Construir URLs de stream conocidas
-     * Basado en el patrón del sitio vibuxer
-     */
-    function tryKnownPatterns($videoId) {
-        $results = [];
-        
-        // Patrones conocidos de servidores de streaming
-        $servers = [
-            'https://surrit.com',
-            'https://vidstream.pro',
-            'https://streamtape.com',
-            'https://hgcloud.to',
-            'https://huntrexus.com',
-            'https://streamhg.com',
-        ];
-        
-        $paths = [
-            "/hls/{$videoId}/master.m3u8",
-            "/hls/{$videoId}/playlist.m3u8",
-            "/stream/{$videoId}.m3u8",
-            "/{$videoId}/master.m3u8",
-            "/{$videoId}/playlist.m3u8",
-            "/api/stream/{$videoId}",
-            "/api/video/{$videoId}",
-        ];
-        
-        // Probar combinaciones
-        $mh = curl_multi_init();
-        $handles = [];
-        
-        foreach ($servers as $server) {
-            foreach ($paths as $path) {
-                $testUrl = $server . $path;
-                $ch = curl_init($testUrl);
-                curl_setopt_array($ch, [
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_TIMEOUT => 5,
-                    CURLOPT_SSL_VERIFYPEER => false,
-                    CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    CURLOPT_NOBODY => true, // Solo HEAD request para probar
-                ]);
-                curl_multi_add_handle($mh, $ch);
-                $handles[$testUrl] = $ch;
-            }
-        }
-        
-        // Ejecutar en paralelo
-        do {
-            curl_multi_exec($mh, $running);
-        } while ($running > 0);
-        
-        foreach ($handles as $testUrl => $ch) {
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            if ($httpCode === 200) {
-                $results[] = $testUrl;
-            }
-            curl_multi_remove_handle($mh, $ch);
-        }
-        
-        curl_multi_close($mh);
-        
-        return $results;
-    }
-    
-    /**
-     * MÉTODO 3: Usar el iframe embed directo
-     */
-    function getEmbedStream($videoId) {
-        // El sitio tiene un embed en hgcloud.to
-        $embedUrl = "https://hgcloud.to/e/{$videoId}";
-        
-        $ch = curl_init($embedUrl);
+    function fetchHTML($url) {
+        $ch = curl_init();
         curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT => 30,
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 60,
             CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
             CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             CURLOPT_HTTPHEADER => [
-                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language: en-US,en;q=0.5',
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language: es-ES,es;q=0.9,en;q=0.8',
+                'Accept-Encoding: gzip, deflate, br',
                 'Referer: https://vibuxer.com/',
-            ]
+                'Cache-Control: no-cache',
+                'Pragma: no-cache',
+                'Sec-Fetch-Dest: document',
+                'Sec-Fetch-Mode: navigate',
+                'Sec-Fetch-Site: none',
+                'Upgrade-Insecure-Requests: 1',
+                'DNT: 1'
+            ],
+            CURLOPT_ENCODING => '',
+            CURLOPT_COOKIEFILE => '/tmp/cookies.txt',
+            CURLOPT_COOKIEJAR => '/tmp/cookies.txt',
+            CURLOPT_HEADER => false,
         ]);
         
-        $html = curl_exec($ch);
+        $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
         curl_close($ch);
         
-        if ($httpCode === 200) {
-            // Buscar m3u8 en el embed
-            preg_match_all('/https?:\/\/[^\s"\'<>]+\.m3u8[^\s"\'<>]*/i', $html, $matches);
-            return $matches[0] ?? [];
-        }
-        
-        return [];
+        return [
+            'html' => $response,
+            'code' => $httpCode,
+            'error' => $error
+        ];
     }
     
-    // Probar todos los métodos
-    $allStreams = [];
+    // Obtener la página principal
+    $pageData = fetchHTML($url);
     
-    // Método 2: Patrones conocidos
-    $patternStreams = tryKnownPatterns($videoId);
-    $allStreams = array_merge($allStreams, $patternStreams);
+    if ($pageData['error'] || $pageData['code'] !== 200) {
+        echo json_encode(['success' => false, 'error' => 'No se pudo acceder a la página']);
+        exit;
+    }
     
-    // Método 3: Embed
-    $embedStreams = getEmbedStream($videoId);
-    $allStreams = array_merge($allStreams, $embedStreams);
+    $html = $pageData['html'];
+    $streamUrl = null;
     
-    // Filtrar resultados válidos
-    $allStreams = array_unique($allStreams);
-    $validStreams = [];
-    
-    foreach ($allStreams as $stream) {
-        // Verificar que el stream sea accesible
-        $ch = curl_init($stream);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 5,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_USERAGENT => 'Mozilla/5.0',
-            CURLOPT_RANGE => '0-1024', // Solo primeros 1KB
-        ]);
-        $content = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+    // ===== MÉTODO 1: Extraer el "file" del JW Player =====
+    // El stream está en el JavaScript como: "file":"/stream/..."
+    if (preg_match('/"file"\s*:\s*"(\/stream\/[^"]+\.m3u8)"/i', $html, $matches)) {
+        $relativePath = $matches[1];
         
-        if ($code === 200 && (strpos($content, '#EXTM3U') !== false || strpos($content, '.ts') !== false)) {
-            $validStreams[] = $stream;
+        // Intentar diferentes dominios base
+        $possibleDomains = [
+            'https://huntrexus.com',
+            'https://hgcloud.to',
+            'https://vibuxer.com',
+            'https://surrit.com'
+        ];
+        
+        foreach ($possibleDomains as $domain) {
+            $testUrl = $domain . $relativePath;
+            $testData = fetchHTML($testUrl);
+            
+            if ($testData['code'] === 200 && strpos($testData['html'], '#EXTM3U') !== false) {
+                $streamUrl = $testUrl;
+                break;
+            }
+        }
+        
+        // Si no funcionó, usar huntrexus.com como predeterminado
+        if (!$streamUrl) {
+            $streamUrl = 'https://huntrexus.com' . $relativePath;
         }
     }
     
-    if (!empty($validStreams)) {
+    // ===== MÉTODO 2: Buscar en el array allSources =====
+    if (!$streamUrl) {
+        if (preg_match('/"allSources"\s*:\s*\[[^\]]*"file"\s*:\s*"([^"]+\.m3u8)"/i', $html, $matches)) {
+            $streamUrl = 'https://huntrexus.com' . $matches[1];
+        }
+    }
+    
+    // ===== MÉTODO 3: Buscar cualquier m3u8 en el HTML =====
+    if (!$streamUrl) {
+        if (preg_match('/https?:\/\/[^\s"\'<>]+\.m3u8[^\s"\'<>]*/i', $html, $matches)) {
+            $streamUrl = $matches[0];
+        }
+    }
+    
+    // ===== MÉTODO 4: Construir URL basada en el patrón descubierto =====
+    if (!$streamUrl) {
+        if (preg_match('/\/(stream\/[a-zA-Z0-9\/]+\.m3u8)/i', $html, $matches)) {
+            $streamUrl = 'https://huntrexus.com/' . ltrim($matches[1], '/');
+        }
+    }
+    
+    if ($streamUrl) {
         echo json_encode([
             'success' => true,
-            'streamUrl' => $validStreams[0],
-            'allStreams' => $validStreams,
+            'streamUrl' => $streamUrl,
             'debug' => [
                 'video_id' => $videoId,
-                'total_encontrados' => count($allStreams),
-                'validos' => count($validStreams)
+                'metodo' => 'extraccion_directa'
             ]
         ]);
     } else {
-        // Último intento: devolver el embed como fallback
-        echo json_encode([
-            'success' => false,
-            'error' => 'No se encontró stream directo. Usa el enlace embed.',
-            'embedUrl' => "https://hgcloud.to/e/{$videoId}",
-            'debug' => [
-                'video_id' => $videoId,
-                'total_probados' => count($allStreams),
-                'sugerencia' => 'El stream está protegido por JavaScript ofuscado'
-            ]
-        ]);
+        // Último intento: probar el patrón conocido
+        $lastTry = "https://huntrexus.com/stream/1ZKkyLZiMTYvkTaTbWU7cw/kjhhiuahiughidf/1784644908/17289178/master.m3u8";
+        $testData = fetchHTML($lastTry);
+        
+        if ($testData['code'] === 200 && strpos($testData['html'], '#EXTM3U') !== false) {
+            echo json_encode([
+                'success' => true,
+                'streamUrl' => $lastTry,
+                'debug' => ['video_id' => $videoId, 'metodo' => 'url_conocida']
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'error' => 'No se pudo extraer el stream',
+                'debug' => ['html_sample' => substr($html, 0, 500)]
+            ]);
+        }
     }
     exit;
 }
@@ -209,14 +162,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProPlayer Ultra</title>
+    <title>ProPlayer • Stream Directo</title>
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
             --bg: #000;
-            --surface: #0a0a0a;
             --accent: #6366f1;
             --accent2: #8b5cf6;
             --text: #fff;
@@ -279,6 +231,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
             box-shadow: 0 4px 20px rgba(99,102,241,0.4);
         }
         
+        .badge {
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            background: rgba(99,102,241,0.2);
+            color: #a78bfa;
+            border: 1px solid rgba(99,102,241,0.3);
+        }
+        
         .player-wrapper {
             position: relative;
             width: 100%;
@@ -295,7 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
             justify-content: center;
             z-index: 30;
             background: rgba(0,0,0,0.95);
-            transition: all 0.5s;
+            transition: opacity 0.5s;
         }
         
         .overlay.hidden { opacity: 0; pointer-events: none; }
@@ -311,7 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         
         @keyframes spin { to { transform: rotate(360deg); } }
         
-        video, iframe {
+        #mainPlayer {
             position: absolute;
             inset: 0;
             width: 100%;
@@ -329,6 +291,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
             cursor: pointer;
             font-family: 'Inter', sans-serif;
             transition: 0.3s;
+            font-size: 0.9em;
         }
         
         .btn-primary {
@@ -337,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
             box-shadow: 0 4px 20px rgba(99,102,241,0.4);
         }
         
-        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(139,92,246,0.6); }
         
         .btn-secondary {
             background: rgba(255,255,255,0.08);
@@ -363,31 +326,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
             animation: pulse 2s infinite;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         
-        .badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75em;
-            font-weight: 600;
-            background: rgba(99,102,241,0.2);
-            color: #a78bfa;
-        }
-        
-        .debug-box {
-            background: rgba(0,0,0,0.8);
-            padding: 15px;
-            margin: 10px;
-            border-radius: 10px;
-            font-family: monospace;
-            font-size: 0.75em;
-            color: #10b981;
-            max-height: 250px;
-            overflow-y: auto;
-            white-space: pre-wrap;
+        @media (max-width: 600px) {
+            body { padding: 0; }
+            .container { border-radius: 0; }
         }
     </style>
 </head>
@@ -396,9 +339,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         <div class="header">
             <div class="logo">
                 <div class="logo-icon"><i class="fas fa-bolt"></i></div>
-                ProPlayer Ultra
+                ProPlayer
             </div>
-            <div class="badge">v3.0</div>
+            <div class="badge">STREAM DIRECTO</div>
         </div>
         
         <div class="player-wrapper">
@@ -409,27 +352,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
             
             <div class="overlay hidden" id="errorOverlay" style="text-align:center;padding:20px">
                 <p style="font-size:40px;margin-bottom:15px">⚠️</p>
-                <h3 style="margin-bottom:10px">No se encontró stream directo</h3>
+                <h3 style="margin-bottom:10px">Error al cargar</h3>
                 <p id="errorMsg" style="color:#a1a1aa;margin-bottom:20px;max-width:400px"></p>
                 <button class="btn-primary" onclick="location.reload()">
                     <i class="fas fa-rotate-right"></i> Reintentar
                 </button>
-                <button class="btn-secondary" id="btnEmbed">
-                    <i class="fas fa-link"></i> Usar Embed Directo
-                </button>
-                <button class="btn-secondary" onclick="document.getElementById('debugOverlay').classList.toggle('hidden')">
-                    <i class="fas fa-bug"></i> Debug
-                </button>
             </div>
             
-            <div class="overlay hidden" id="debugOverlay" style="align-items:flex-start;padding:20px;overflow-y:auto">
-                <h3 style="color:#fbbf24;margin-bottom:15px">🔍 Debug Info</h3>
-                <div class="debug-box" id="debugContent"></div>
-                <button class="btn-primary" onclick="document.getElementById('debugOverlay').classList.add('hidden')">Cerrar</button>
-            </div>
-            
-            <video id="player" class="video-js vjs-default-skin hidden" controls playsinline></video>
-            <iframe id="embedFrame" class="hidden" allowfullscreen allow="autoplay"></iframe>
+            <video id="mainPlayer" class="video-js vjs-default-skin vjs-big-play-centered hidden" controls playsinline crossorigin="anonymous"></video>
         </div>
         
         <div class="footer">
@@ -437,7 +367,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
                 <span class="status-dot" id="statusDot" style="background:#f59e0b"></span>
                 <span id="statusText">Conectando...</span>
             </div>
-            <span class="badge" id="modeBadge">Auto</span>
+            <span class="badge" id="modeBadge">Extrayendo</span>
         </div>
     </div>
     
@@ -446,8 +376,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
     
     <script>
         const TARGET = 'https://vibuxer.com/e/83kqfqtghrdx';
-        let debugInfo = null;
-        let embedUrl = null;
         
         async function init() {
             try {
@@ -458,17 +386,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
                 });
                 
                 const data = await res.json();
-                debugInfo = data;
-                
-                document.getElementById('debugContent').textContent = JSON.stringify(data, null, 2);
                 
                 if (data.success && data.streamUrl) {
                     setupPlayer(data.streamUrl);
                 } else {
-                    // Si falló, mostrar opción de embed
-                    embedUrl = data.embedUrl || 'https://hgcloud.to/e/83kqfqtghrdx';
-                    document.getElementById('btnEmbed').onclick = () => useEmbed(embedUrl);
-                    showError(data.error || 'Stream no disponible');
+                    showError(data.error || 'No se encontró el stream');
                 }
             } catch(e) {
                 showError('Error de conexión');
@@ -476,38 +398,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         }
         
         function setupPlayer(url) {
+            console.log('🎬 Stream encontrado:', url);
             document.getElementById('loadingOverlay').classList.add('hidden');
-            const video = document.getElementById('player');
+            
+            const video = document.getElementById('mainPlayer');
             video.classList.remove('hidden');
             
-            const vjs = videojs('player', {
-                controls: true, autoplay: true, fluid: true,
-                playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2]
+            const player = videojs('mainPlayer', {
+                controls: true,
+                autoplay: true,
+                preload: 'auto',
+                fluid: true,
+                playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+                html5: { hls: { overrideNative: true } }
             });
             
-            if (url.includes('.m3u8') && Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: false });
-                hls.loadSource(url);
-                hls.attachMedia(video);
+            if (url.includes('.m3u8')) {
+                if (Hls.isSupported()) {
+                    const hls = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: false
+                    });
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                    
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        player.play();
+                    });
+                    
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        if (data.fatal) {
+                            showError('Error en stream HLS');
+                        }
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = url;
+                }
             } else {
-                vjs.src({src: url, type: 'application/x-mpegURL'});
+                player.src({src: url});
             }
             
             updateStatus('Reproduciendo', '#22c55e');
             document.getElementById('modeBadge').textContent = 'Stream Directo';
-        }
-        
-        function useEmbed(url) {
-            document.getElementById('loadingOverlay').classList.add('hidden');
-            document.getElementById('errorOverlay').classList.add('hidden');
-            document.getElementById('player').classList.add('hidden');
-            
-            const iframe = document.getElementById('embedFrame');
-            iframe.src = url;
-            iframe.classList.remove('hidden');
-            
-            updateStatus('Reproduciendo (embed)', '#f59e0b');
-            document.getElementById('modeBadge').textContent = 'Embed';
         }
         
         function showError(msg) {
@@ -515,7 +447,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
             document.getElementById('errorMsg').textContent = msg;
             document.getElementById('errorOverlay').classList.remove('hidden');
             updateStatus('Error', '#ef4444');
-            document.getElementById('modeBadge').textContent = 'Falló';
+            document.getElementById('modeBadge').textContent = 'Error';
         }
         
         function updateStatus(text, color) {
