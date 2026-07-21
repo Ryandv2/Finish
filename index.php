@@ -2,49 +2,7 @@
 error_reporting(0);
 ini_set('display_errors', 0);
 
-// ============================================
-// RUTA DE PRUEBA - MUESTRA EL HTML QUE LLEGA
-// ============================================
-if (isset($_GET['test'])) {
-    $testUrl = 'https://vibuxer.com/e/83kqfqtghrdx';
-    
-    $ch = curl_init($testUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        CURLOPT_HTTPHEADER => [
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language: es-ES,es;q=0.9',
-            'Referer: https://vibuxer.com/',
-            'Cookie: file_id=33036962; aff=16339'
-        ]
-    ]);
-    
-    $html = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    $size = strlen($html);
-    curl_close($ch);
-    
-    header('Content-Type: application/json');
-    echo json_encode([
-        'http_code' => $code,
-        'error' => $error,
-        'html_size' => $size,
-        'html_preview' => substr($html, 0, 3000),
-        'contains_file' => strpos($html, '"file"') !== false,
-        'contains_m3u8' => strpos($html, 'm3u8') !== false,
-        'contains_stream' => strpos($html, '/stream/') !== false
-    ]);
-    exit;
-}
-
-// ============================================
-// API PARA EXTRAER STREAM
-// ============================================
+// API para extraer URL del embed
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
     header('Content-Type: application/json');
     header('Access-Control-Allow-Origin: *');
@@ -57,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         exit;
     }
     
+    // Extraer ID del video
     preg_match('/\/e\/([a-zA-Z0-9]+)/', $url, $matches);
     $videoId = $matches[1] ?? null;
     
@@ -65,363 +24,458 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['api'])) {
         exit;
     }
     
-    function fetchWithCookies($url, $cookies = '') {
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
-            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            CURLOPT_HTTPHEADER => [
-                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language: es-ES,es;q=0.9,en;q=0.8',
-                'Accept-Encoding: gzip, deflate, br',
-                'Referer: https://vibuxer.com/',
-                'Cache-Control: no-cache',
-                'Pragma: no-cache',
-                'Sec-Fetch-Dest: document',
-                'Sec-Fetch-Mode: navigate',
-                'Sec-Fetch-Site: none',
-                'Upgrade-Insecure-Requests: 1'
-            ],
-            CURLOPT_ENCODING => '',
-            CURLOPT_COOKIE => $cookies,
-            CURLOPT_HEADER => false,
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-        
-        return ['html' => $response, 'code' => $httpCode, 'error' => $error];
-    }
+    // Obtener la página
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        CURLOPT_HTTPHEADER => [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Referer: https://vibuxer.com/'
+        ]
+    ]);
     
-    $cookies = 'file_id=33036962; aff=16339';
-    $pageData = fetchWithCookies($url, $cookies);
+    $html = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
     
-    if ($pageData['error'] || $pageData['code'] !== 200) {
-        echo json_encode([
-            'success' => false,
-            'error' => 'Error al obtener la página: ' . ($pageData['error'] ?: 'HTTP ' . $pageData['code']),
-            'debug' => ['html_size' => strlen($pageData['html'])]
-        ]);
+    if ($httpCode !== 200 || !$html) {
+        echo json_encode(['success' => false, 'error' => 'No se pudo acceder a la página']);
         exit;
     }
     
-    $html = $pageData['html'];
-    $streamUrl = null;
+    // Buscar URLs de embed en el HTML
+    $embedUrl = null;
     
-    // MÉTODO 1: Buscar "file":"/stream/...m3u8"
-    if (preg_match('/"file"\s*:\s*"(\/stream\/[^"]+\.m3u8)"/i', $html, $matches)) {
-        $relativePath = $matches[1];
-        
-        $domains = [
-            'https://vibuxer.com',
-            'https://huntrexus.com',
-            'https://hgcloud.to',
-            'https://surrit.com'
-        ];
-        
-        foreach ($domains as $domain) {
-            $testUrl = $domain . $relativePath;
-            $testData = fetchWithCookies($testUrl, $cookies);
-            if ($testData['code'] === 200 && strpos($testData['html'], '#EXTM3U') !== false) {
-                $streamUrl = $testUrl;
-                break;
-            }
-        }
-        
-        if (!$streamUrl) {
-            $streamUrl = 'https://vibuxer.com' . $relativePath;
+    // Método 1: Buscar iframes con src
+    if (preg_match('/<iframe[^>]+src=["\']([^"\']+)["\']/i', $html, $matches)) {
+        $embedUrl = html_entity_decode($matches[1]);
+        if (strpos($embedUrl, '//') === 0) {
+            $embedUrl = 'https:' . $embedUrl;
         }
     }
     
-    // MÉTODO 2: Buscar en allSources
-    if (!$streamUrl && preg_match('/"allSources"\s*:\s*\[[^\]]*"file"\s*:\s*"([^"]+\.m3u8)"/i', $html, $matches)) {
-        $streamUrl = 'https://vibuxer.com' . $matches[1];
+    // Método 2: Buscar en el código JavaScript
+    if (!$embedUrl && preg_match('/hgcloud\.to\/e\/[a-zA-Z0-9]+/i', $html, $matches)) {
+        $embedUrl = 'https://' . $matches[0];
     }
     
-    // MÉTODO 3: Último intento
-    if (!$streamUrl && preg_match('/"file"\s*:\s*"([^"]+\.m3u8)"/i', $html, $matches)) {
-        $streamUrl = 'https://vibuxer.com' . $matches[1];
+    // Método 3: Buscar en el texto de compartir
+    if (!$embedUrl && preg_match('/https?:\/\/hgcloud\.to\/e\/[a-zA-Z0-9]+/i', $html, $matches)) {
+        $embedUrl = $matches[0];
     }
     
-    if ($streamUrl) {
+    // Método 4: Construir URL basada en el ID
+    if (!$embedUrl) {
+        $embedUrl = "https://hgcloud.to/e/{$videoId}";
+    }
+    
+    // Verificar que la URL de embed funciona
+    $ch = curl_init($embedUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    ]);
+    curl_exec($ch);
+    $embedCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($embedUrl) {
         echo json_encode([
             'success' => true,
-            'streamUrl' => $streamUrl,
-            'debug' => ['video_id' => $videoId, 'metodo' => 'extraccion_cookies']
+            'embedUrl' => $embedUrl,
+            'videoId' => $videoId,
+            'embedCode' => $embedCode
         ]);
     } else {
         echo json_encode([
             'success' => false,
-            'error' => 'No se encontró el stream en el HTML recibido',
-            'debug' => [
-                'html_size' => strlen($html),
-                'html_preview' => substr($html, 0, 2000),
-                'contains_file' => strpos($html, '"file"') !== false,
-                'contains_m3u8' => strpos($html, 'm3u8') !== false,
-                'contains_stream' => strpos($html, '/stream/') !== false
-            ]
+            'error' => 'No se encontró URL de embed'
         ]);
     }
     exit;
 }
+
+// Página principal
+$defaultUrl = 'https://vibuxer.com/e/83kqfqtghrdx';
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProPlayer • Stream Directo</title>
-    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet">
+    <title>ProPlayer • Embed Extractor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
-            --bg: #000;
+            --bg: #0a0a0a;
+            --surface: #111;
             --accent: #6366f1;
+            --accent2: #8b5cf6;
             --text: #fff;
             --text2: #a1a1aa;
             --success: #22c55e;
             --warning: #f59e0b;
             --error: #ef4444;
             --gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --radius: 20px;
         }
-        * { margin:0; padding:0; box-sizing:border-box; }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             background: var(--bg);
             font-family: 'Inter', sans-serif;
             color: var(--text);
             min-height: 100vh;
+            padding: 20px;
+            background-image: radial-gradient(ellipse at top, rgba(99,102,241,0.12), transparent 50%);
+        }
+        
+        .app {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            font-weight: 800;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            color: var(--text2);
+            font-size: 0.95em;
+        }
+        
+        /* Input Section */
+        .input-section {
+            background: var(--surface);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-section input {
+            flex: 1;
+            padding: 14px 18px;
+            background: #000;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 0.9em;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .input-section input:focus {
+            border-color: var(--accent);
+        }
+        
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9em;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 20px;
-            background-image: radial-gradient(ellipse at top, rgba(99,102,241,0.15), transparent 50%);
+            gap: 8px;
+            white-space: nowrap;
         }
-        .container {
-            width: 100%;
-            max-width: 1000px;
-            background: rgba(10,10,10,0.95);
+        
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(139,92,246,0.5);
+        }
+        
+        /* Player Card */
+        .player-card {
+            background: var(--surface);
             border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 24px;
+            border-radius: var(--radius);
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 80px rgba(99,102,241,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
-        .header {
+        
+        .player-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 18px 24px;
-            background: rgba(0,0,0,0.5);
+            padding: 16px 20px;
+            background: rgba(0,0,0,0.4);
             border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.3em;
-            font-weight: 800;
+        
+        .player-title {
+            font-weight: 700;
+            font-size: 0.95em;
         }
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--gradient);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 20px rgba(99,102,241,0.4);
-        }
+        
         .badge {
-            padding: 5px 14px;
+            padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.75em;
             font-weight: 600;
             background: rgba(99,102,241,0.2);
             color: #a78bfa;
-            border: 1px solid rgba(99,102,241,0.3);
         }
+        
         .player-wrapper {
             position: relative;
             width: 100%;
             aspect-ratio: 16/9;
             background: #000;
         }
-        .overlay {
+        
+        iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+        }
+        
+        /* Loading */
+        .loading-overlay {
             position: absolute;
             inset: 0;
+            background: rgba(0,0,0,0.9);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 30;
-            background: rgba(0,0,0,0.95);
-            transition: opacity 0.5s;
+            z-index: 10;
+            transition: opacity 0.4s;
         }
-        .overlay.hidden { opacity:0; pointer-events:none; }
+        
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        
         .spinner {
-            width: 50px; height: 50px;
-            border: 3px solid rgba(255,255,255,0.1);
+            width: 44px; height: 44px;
+            border: 3px solid rgba(255,255,255,0.08);
             border-top: 3px solid var(--accent);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
         }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        #mainPlayer { position:absolute; inset:0; width:100%; height:100%; }
-        .hidden { display:none !important; }
-        button {
-            padding: 12px 24px; margin:5px;
-            border: none; border-radius: 10px;
-            font-weight: 600; cursor: pointer;
-            font-family: 'Inter', sans-serif; transition: 0.3s;
-        }
-        .btn-primary {
-            background: var(--gradient); color: white;
-            box-shadow: 0 4px 20px rgba(99,102,241,0.4);
-        }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(139,92,246,0.6); }
-        .btn-secondary {
-            background: rgba(255,255,255,0.08); color: white;
-            border: 1px solid rgba(255,255,255,0.15);
-        }
-        .footer {
-            display: flex; justify-content: space-between;
-            padding: 12px 24px; font-size: 0.85em;
-            background: rgba(0,0,0,0.4);
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Info Section */
+        .info-section {
+            padding: 16px 20px;
+            background: rgba(0,0,0,0.3);
             border-top: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            color: var(--text2);
+            gap: 10px;
+            flex-wrap: wrap;
         }
+        
+        .info-section a {
+            color: var(--accent2);
+            text-decoration: none;
+            word-break: break-all;
+        }
+        
+        .info-section a:hover {
+            text-decoration: underline;
+        }
+        
         .status-dot {
-            width: 7px; height: 7px; border-radius: 50%;
-            display: inline-block; margin-right: 8px;
-            animation: pulse 2s infinite;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
         }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        @media (max-width: 600px) { body { padding:0; } .container { border-radius:0; } }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text2);
+            font-size: 0.8em;
+        }
+        
+        /* Responsive */
+        @media (max-width: 640px) {
+            body { padding: 10px; }
+            .input-section { flex-direction: column; }
+            .header h1 { font-size: 1.5em; }
+            .info-section { flex-direction: column; text-align: center; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="app">
+        <!-- Header -->
         <div class="header">
-            <div class="logo">
-                <div class="logo-icon"><i class="fas fa-bolt"></i></div>
-                ProPlayer
-            </div>
-            <div class="badge">STREAM DIRECTO</div>
+            <h1>🎬 ProPlayer Embed</h1>
+            <p>Extrae y reproduce el embed de cualquier video</p>
         </div>
-        <div class="player-wrapper">
-            <div class="overlay" id="loadingOverlay">
-                <div class="spinner"></div>
-                <p style="margin-top:20px;color:#a1a1aa">Extrayendo stream...</p>
-            </div>
-            <div class="overlay hidden" id="errorOverlay" style="text-align:center;padding:20px">
-                <p style="font-size:40px;margin-bottom:15px">⚠️</p>
-                <h3 style="margin-bottom:10px">Error al cargar</h3>
-                <p id="errorMsg" style="color:#a1a1aa;margin-bottom:20px;max-width:400px"></p>
-                <button class="btn-primary" onclick="location.reload()"><i class="fas fa-rotate-right"></i> Reintentar</button>
-                <button class="btn-secondary" onclick="toggleDebug()"><i class="fas fa-bug"></i> Ver Debug</button>
-            </div>
-            <video id="mainPlayer" class="video-js vjs-default-skin vjs-big-play-centered hidden" controls playsinline crossorigin="anonymous"></video>
+        
+        <!-- Input -->
+        <div class="input-section">
+            <input 
+                type="text" 
+                id="urlInput" 
+                value="<?php echo htmlspecialchars($defaultUrl); ?>" 
+                placeholder="Pega la URL del video (ej: https://vibuxer.com/e/...)"
+            >
+            <button class="btn btn-primary" onclick="cargarVideo()">
+                <i class="fas fa-play"></i> Cargar
+            </button>
         </div>
+        
+        <!-- Player -->
+        <div class="player-card">
+            <div class="player-header">
+                <span class="player-title">
+                    <span class="status-dot" id="statusDot" style="background:#f59e0b"></span>
+                    <span id="statusText">Listo para cargar</span>
+                </span>
+                <span class="badge" id="modeBadge">Embed</span>
+            </div>
+            
+            <div class="player-wrapper">
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <p style="margin-top:16px;color:#a1a1aa;font-size:0.9em">Extrayendo embed...</p>
+                </div>
+                <iframe 
+                    id="playerFrame"
+                    src=""
+                    allowfullscreen
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"
+                    loading="lazy">
+                </iframe>
+            </div>
+            
+            <div class="info-section">
+                <span>
+                    <i class="fas fa-link"></i> 
+                    Embed: <a id="embedLink" href="#" target="_blank">-</a>
+                </span>
+                <span>
+                    <i class="fas fa-video"></i> 
+                    ID: <strong id="videoId">-</strong>
+                </span>
+            </div>
+        </div>
+        
+        <!-- Footer -->
         <div class="footer">
-            <div>
-                <span class="status-dot" id="statusDot" style="background:#f59e0b"></span>
-                <span id="statusText">Conectando...</span>
-            </div>
-            <span class="badge" id="modeBadge">Extrayendo</span>
+            ProPlayer • Extrae automáticamente el embed de cualquier video
         </div>
     </div>
     
-    <!-- Panel de debug -->
-    <div id="debugPanel" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#111; color:#0f0; max-height:200px; overflow-y:auto; padding:10px; font-family:monospace; font-size:11px; z-index:100; white-space:pre-wrap; word-break:break-all;"></div>
-    
-    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js"></script>
     <script>
-        const TARGET = 'https://vibuxer.com/e/83kqfqtghrdx';
-        let debugInfo = null;
+        const DEFAULT_URL = '<?php echo $defaultUrl; ?>';
+        let currentEmbedUrl = '';
         
-        async function init() {
+        // Cargar video por defecto al iniciar
+        window.addEventListener('DOMContentLoaded', () => {
+            cargarVideo();
+        });
+        
+        // Enter en el input
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') cargarVideo();
+        });
+        
+        async function cargarVideo() {
+            const url = document.getElementById('urlInput').value.trim();
+            
+            if (!url) {
+                alert('Por favor ingresa una URL');
+                return;
+            }
+            
+            // Mostrar loading
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            updateStatus('Extrayendo embed...', '#f59e0b', 'Extrayendo');
+            
             try {
-                const res = await fetch('<?php echo $_SERVER['PHP_SELF']; ?>?api=1', {
+                const response = await fetch('<?php echo $_SERVER['PHP_SELF']; ?>?api=1', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({url: TARGET})
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
                 });
                 
-                const data = await res.json();
-                debugInfo = data;
+                const data = await response.json();
                 
-                if (data.success && data.streamUrl) {
-                    setupPlayer(data.streamUrl);
+                if (data.success && data.embedUrl) {
+                    currentEmbedUrl = data.embedUrl;
+                    
+                    // Cargar en el iframe
+                    document.getElementById('playerFrame').src = data.embedUrl;
+                    
+                    // Actualizar info
+                    document.getElementById('embedLink').href = data.embedUrl;
+                    document.getElementById('embedLink').textContent = data.embedUrl;
+                    document.getElementById('videoId').textContent = data.videoId || '-';
+                    
+                    updateStatus('Reproduciendo', '#22c55e', 'Embed');
+                    
+                    // Ocultar loading cuando el iframe cargue
+                    document.getElementById('playerFrame').onload = function() {
+                        document.getElementById('loadingOverlay').classList.add('hidden');
+                    };
+                    
+                    // Timeout por si el iframe no dispara onload
+                    setTimeout(() => {
+                        document.getElementById('loadingOverlay').classList.add('hidden');
+                    }, 3000);
+                    
                 } else {
-                    showError(data.error || 'No se encontró el stream');
-                    if (data.debug) {
-                        document.getElementById('debugPanel').innerText = JSON.stringify(data.debug, null, 2);
-                    }
+                    updateStatus('Error: ' + (data.error || 'No encontrado'), '#ef4444', 'Error');
+                    document.getElementById('loadingOverlay').classList.add('hidden');
                 }
-            } catch(e) {
-                showError('Error de conexión: ' + e.message);
+            } catch (error) {
+                updateStatus('Error de conexión', '#ef4444', 'Error');
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                console.error('Error:', error);
             }
         }
         
-        function setupPlayer(url) {
-            console.log('🎬 Stream encontrado:', url);
-            document.getElementById('loadingOverlay').classList.add('hidden');
-            document.getElementById('mainPlayer').classList.remove('hidden');
-            
-            const player = videojs('mainPlayer', {
-                controls: true, autoplay: true, preload: 'auto', fluid: true,
-                playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2]
-            });
-            
-            const videoEl = player.el().querySelector('video');
-            
-            if (url.includes('.m3u8')) {
-                if (Hls.isSupported()) {
-                    const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
-                    hls.loadSource(url);
-                    hls.attachMedia(videoEl);
-                    hls.on(Hls.Events.MANIFEST_PARSED, () => player.play());
-                    hls.on(Hls.Events.ERROR, (event, data) => {
-                        if (data.fatal) showError('Error fatal en stream HLS');
-                    });
-                } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-                    player.src({src: url, type: 'application/x-mpegURL'});
-                }
-            } else {
-                player.src({src: url});
-            }
-            
-            updateStatus('Reproduciendo', '#22c55e');
-            document.getElementById('modeBadge').textContent = 'Stream Directo';
-        }
-        
-        function showError(msg) {
-            document.getElementById('loadingOverlay').classList.add('hidden');
-            document.getElementById('errorMsg').textContent = msg;
-            document.getElementById('errorOverlay').classList.remove('hidden');
-            updateStatus('Error', '#ef4444');
-            document.getElementById('modeBadge').textContent = 'Error';
-        }
-        
-        function updateStatus(text, color) {
+        function updateStatus(text, dotColor, badgeText) {
             document.getElementById('statusText').textContent = text;
-            document.getElementById('statusDot').style.background = color;
+            document.getElementById('statusDot').style.background = dotColor;
+            document.getElementById('modeBadge').textContent = badgeText || 'Embed';
         }
-        
-        function toggleDebug() {
-            const panel = document.getElementById('debugPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-        }
-        
-        init();
     </script>
 </body>
 </html>
