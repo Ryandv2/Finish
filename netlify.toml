@@ -1,8 +1,10 @@
 [build]
-  command = "echo 'Build completo'"
+  command = "echo 'Build OK'"
   publish = "."
 
 [[headers]]
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "*"
